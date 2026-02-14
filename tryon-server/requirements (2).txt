@@ -1,9 +1,0 @@
-Flask
-flask-cors
-opencv-python
-Pillow
-numpy
-Flask-SQLAlchemy
-Flask-Migrate
-python-dotenv
-psycopg2-binary
