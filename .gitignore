@@ -1,19 +1,39 @@
 ﻿# Python
 venv/
 __pycache__/
-*.pyc
+*.py[cod]
 *.pyo
+*.pyd
 *.egg-info/
+pip-log.txt
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.so
 
 # Node
 node_modules/
 .vite/
 dist/
 
+# Build outputs
+build/
+coverage/
+*.log
+
 # Environment
 .env
 .env.local
 
-# OS
+# Editor/OS
 .DS_Store
 Thumbs.db
+.vscode/
+.idea/
+
+# Static uploads and runtime artifacts
+instance/
+uploads/
+
+# Ignore local VSCode workspace settings
+.history/

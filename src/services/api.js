@@ -1,16 +1,79 @@
-// API Base URL - change this to your backend URL
-const API_BASE_URL = 'http://localhost:5000/api';
+// SECURITY: API Base URL - supports environment variable configuration
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-// Helper function to handle API responses
-const handleResponse = async (response) => {
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'An error occurred' }));
-    throw new Error(error.error || `HTTP error! status: ${response.status}`);
+// Helper to get JWT token
+const getAuthHeader = () => {
+  const token = localStorage.getItem('jwt_token');
+  if (token) {
+    return { Authorization: `Bearer ${token}` };
   }
-  return response.json();
+  return {};
 };
 
-// Product API calls
+// Helper function to handle API responses with SECURITY: Global 401 error handling
+const handleResponse = async (response) => {
+  const data = await response.json().catch(() => ({ error: 'An error occurred' }));
+  
+  // SECURITY: Handle 401 Unauthorized globally - token expired or invalid
+  if (response.status === 401) {
+    localStorage.removeItem('jwt_token');
+    window.location.href = '/login';
+    throw new Error('Session expired. Please log in again.');
+  }
+  
+  if (!response.ok) {
+    throw new Error(data.error || data.details || `HTTP error! status: ${response.status}`);
+  }
+  return data;
+};
+
+// ==================== AUTHENTICATION ====================
+
+export const authAPI = {
+  register: async (email, password, name) => {
+    const response = await fetch(`${API_BASE_URL}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, name }),
+    });
+    const data = await handleResponse(response);
+    if (data.token) {
+      localStorage.setItem('jwt_token', data.token);
+    }
+    return data;
+  },
+
+  login: async (email, password) => {
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await handleResponse(response);
+    if (data.token) {
+      localStorage.setItem('jwt_token', data.token);
+    }
+    return data;
+  },
+
+  verify: async () => {
+    const response = await fetch(`${API_BASE_URL}/auth/verify`, {
+      headers: getAuthHeader(),
+    });
+    return handleResponse(response);
+  },
+
+  logout: () => {
+    localStorage.removeItem('jwt_token');
+  },
+
+  isAuthenticated: () => {
+    return !!localStorage.getItem('jwt_token');
+  },
+};
+
+// ==================== PRODUCT API ====================
+
 export const productAPI = {
   // Get all products
   getAll: async (filters = {}) => {
@@ -32,7 +95,8 @@ export const productAPI = {
   },
 };
 
-// Try-on API calls
+// ==================== TRY-ON API ====================
+
 export const tryonAPI = {
   // Upload selfie and get try-on result
   tryOn: async (productId, selfieFile) => {
@@ -47,7 +111,8 @@ export const tryonAPI = {
   },
 };
 
-// Order API calls
+// ==================== ORDER API ====================
+
 export const orderAPI = {
   // Create new order
   create: async (orderData) => {
@@ -55,14 +120,52 @@ export const orderAPI = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...getAuthHeader(),
       },
       body: JSON.stringify(orderData),
     });
     return handleResponse(response);
   },
+
+  // Get user orders
+  getUserOrders: async (userId) => {
+    const response = await fetch(`${API_BASE_URL}/orders/${userId}`, {
+      headers: getAuthHeader(),
+    });
+    return handleResponse(response);
+  },
+
+  // Get all orders (admin)
+  getAllOrders: async () => {
+    const response = await fetch(`${API_BASE_URL}/admin/orders`, {
+      headers: getAuthHeader(),
+    });
+    return handleResponse(response);
+  },
 };
 
-// Customization API (you can add these endpoints to backend later)
+// ==================== USER API ====================
+
+export const userAPI = {
+  // Get user profile
+  getProfile: async (userId) => {
+    const response = await fetch(`${API_BASE_URL}/user/${userId}`, {
+      headers: getAuthHeader(),
+    });
+    return handleResponse(response);
+  },
+
+  // Get all users (admin)
+  getAllUsers: async () => {
+    const response = await fetch(`${API_BASE_URL}/admin/users`, {
+      headers: getAuthHeader(),
+    });
+    return handleResponse(response);
+  },
+};
+
+// ==================== CUSTOMIZATION API ====================
+
 export const customizationAPI = {
   // Create customization
   create: async (customData) => {
@@ -70,12 +173,15 @@ export const customizationAPI = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...getAuthHeader(),
       },
       body: JSON.stringify(customData),
     });
     return handleResponse(response);
   },
 };
+
+// ==================== UTILITY ====================
 
 // Helper function to get full image URL
 export const getImageURL = (path) => {
@@ -85,9 +191,11 @@ export const getImageURL = (path) => {
 };
 
 export default {
+  auth: authAPI,
   products: productAPI,
   tryon: tryonAPI,
   orders: orderAPI,
+  users: userAPI,
   customization: customizationAPI,
   getImageURL,
 };

@@ -59,8 +59,8 @@ class Order(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Relationships
-    items = db.relationship('OrderItem', backref='order', lazy=True)
+    # Relationships - SECURITY: cascade delete ensures OrderItems removed when Order deleted
+    items = db.relationship('OrderItem', backref='order', lazy=True, cascade='all, delete-orphan')
 
     def __repr__(self):
         return f'<Order {self.id}>'

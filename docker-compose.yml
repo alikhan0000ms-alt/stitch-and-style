@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  # Backend API service
+  backend:
+    build: .
+    container_name: stitch-and-style-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - FLASK_ENV=development
+      - SECRET_KEY=${SECRET_KEY:-your-dev-secret-key}
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///stitch_style.db}
+    volumes:
+      - ./tryon-server:/app
+      - ./static:/app/static
+      - ./uploads:/app/uploads
+    command: python app.py
+    restart: unless-stopped
+
+  # Frontend development service (optional, for dev workflow)
+  frontend:
+    image: node:18-alpine
+    container_name: stitch-and-style-frontend
+    working_dir: /app
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: npm run dev
+    restart: unless-stopped
+
+  # Database service (optional, for PostgreSQL setup)
+  # db:
+  #   image: postgres:15-alpine
+  #   container_name: stitch-and-style-db
+  #   environment:
+  #     - POSTGRES_USER=stitch_user
+  #     - POSTGRES_PASSWORD=stitch_password
+  #     - POSTGRES_DB=stitch_style
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   restart: unless-stopped
+
+volumes:
+  # postgres_data:
+
+networks:
+  default:
+    name: stitch-and-style-network

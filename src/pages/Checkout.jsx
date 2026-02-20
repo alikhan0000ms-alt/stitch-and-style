@@ -1,11 +1,14 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { orderAPI } from "../services/api";
 
 function Checkout() {
   const location = useLocation();
   const navigate = useNavigate();
 
   const item = location.state?.item;
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -34,16 +37,35 @@ function Checkout() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setSubmitting(true);
+    setError(null);
 
-    console.log("Order Placed:", {
-      product: item,
-      customer: formData,
-    });
+    try {
+      // Create order via API
+      const orderResponse = await orderAPI.create({
+        product_id: item.id,
+        quantity: item.quantity || 1,
+        user_info: {
+          email: formData.email,
+          name: formData.name,
+          shipping_address: formData.address,
+        },
+      });
 
-    alert("Order confirmed!");
-    navigate("/");
+      if (orderResponse.status === "success") {
+        alert("Order placed successfully!");
+        navigate("/user-dashboard");
+      } else {
+        setError("Failed to place order");
+      }
+    } catch (err) {
+      setError(err.message);
+      console.error("Order error:", err);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -55,6 +77,12 @@ function Checkout() {
         <h2 className="text-2xl font-bold text-[#C97C7C] text-center mb-6">
           Checkout: {item.name}
         </h2>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
+            {error}
+          </div>
+        )}
 
         <input
           type="text"
@@ -100,25 +128,29 @@ function Checkout() {
           name="payment"
           value={formData.payment}
           onChange={handleChange}
-          className="w-full p-3 mb-6 border rounded-lg"
+          className="w-full p-3 mb-6 border rounded-lg outline-none"
         >
           <option>Cash on Delivery</option>
-          
+          <option disabled>Credit Card (Soon)</option>
+          <option disabled>Bank Transfer (Soon)</option>
         </select>
 
         <button
           type="submit"
-          className="w-full bg-[#C97C7C] text-white py-3 rounded-full hover:bg-[#b75d5d] transition"
+          disabled={submitting}
+          className={`w-full py-3 rounded-full text-white font-semibold transition ${
+            submitting
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-[#C97C7C] hover:bg-[#b75d5d]"
+          }`}
         >
-          Confirm Order
+          {submitting ? "Processing..." : "Confirm Order"}
         </button>
 
         <button
           type="button"
           onClick={() => navigate(-1)}
-          className="mt-4 text-sm text-[#C97C7C]"
-        >
-          Cancel
+          className="mt-4 w-full text-sm text-[#C97C7C] hover:underline"
         </button>
       </form>
     </section>
